@@ -11,39 +11,42 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import pickle
+from sklearn.preprocessing import MinMaxScaler
 
 # YOUR IMPLEMENTATION
 # Thoroughly comment your code to make it easy to follow
 # getting new data frame with lookback into 3 previous days 
-def sequence(data):
-  # setting names of columns of dataframe
-  names = []
-  # loop over previous 3 days
-  for j in range(1,4):
-    # get all the 4 features for each day
-    names += [f+'(t-{})'.format(j) for f in features]
-  # add target column to the dataframe
-  names.append('target(t)')
-  
-  # create a dataframe with column name list designed in above loop
-  df_new = pd.DataFrame(columns= names, index= dates[:len(data)-3])
-  
-  # loop over all the days having 3 previous days
-  for i in range(len(data)-3):
-    # list to store values of each row (day)
-    cols = []
-   # loop for getting previous 3 days data
-    for j in range(1,4):
-      # getting every feature from each day
-      for f in features:
-        # adding value of jth previous day and f feature to cols list
-        cols.append(data[f][i+j])
-    # setting open price of current day as target variable
-    cols.append(data[' Open'][i])
-    # add the data to new dataframe
-    df_new.loc[dates[i]]= cols
-  # returning the new dataframe
-  return(df_new)
+def sequence(data, dates):
+	features = data.columns[1:]
+	print(features)
+	# setting names of columns of dataframe
+	names = []
+	# loop over previous 3 days
+	for j in range(1,4):
+		# get all the 4 features for each day
+		names += [f+'(t-{})'.format(j) for f in features]
+	# add target column to the dataframe
+	names.append('target(t)')
+	# create a dataframe with column name list designed in above loop
+	df_new = pd.DataFrame(columns= names, index= dates[:len(data)-3])
+	
+	# loop over all the days having 3 previous days
+	for i in range(len(data)-3):
+		# list to store values of each row (day)
+		cols = []
+	# loop for getting previous 3 days data
+		for j in range(1,4):
+			# getting every feature from each day
+			for f in features:
+				# adding value of jth previous day and f feature to cols list
+				cols.append(data[f][i+j])
+		# setting open price of current day as target variable
+		cols.append(data[' Open'][i])
+		# add the data to new dataframe
+		df_new.loc[dates[i]]= cols
+	# returning the new dataframe
+	return(df_new)
 
 # calculate rmse of data
 def rmse(actual, pred):
@@ -55,9 +58,10 @@ def rmse(actual, pred):
   return error
 
 def main():
-    '''# 1. load your training data'''
+	'''# 1. load your training data'''
     # read the csv file
-	data = pd.read_csv(os.path.join('data', 'q2_dataset.csv'))
+	data = pd.read_csv(os.path.join('data','q2_dataset.csv'))
+
 	# getting date column
 	dates = data['Date']
 	# extract the 4 features volume, open, low and High
@@ -67,7 +71,7 @@ def main():
 	# selecting only required column
 	data = data[cols]
 	# get data to save to csv
-	data_csv = sequence(data)
+	data_csv = sequence(data, dates)
 	# splitting the data into train and test data
 	train, test = train_test_split(data_csv, test_size = 0.3, random_state = 42)
 	# saving train data
@@ -77,7 +81,7 @@ def main():
 
 	'''loading training data & preprocessing'''
 	# reading train data
-	train_data = pd.read_csv('train_data_RNN.csv')
+	train_data = pd.read_csv(os.path.join('data','train_data_RNN.csv'))
 	# column names of input features
 	col_names = train_data.columns[1:-1]
 	# getting input and output data
@@ -87,12 +91,14 @@ def main():
 	# splitting the data in train & validation
 	X_train, X_val, y_train, y_val = train_test_split(X,y, test_size = 0.2, random_state = 21)
 	# prepricessing
-	from sklearn.preprocessing import MinMaxScaler
 	scaler1 = MinMaxScaler()
 	scaler2 = MinMaxScaler()
 	# normalising the data
 	X_train_norm = scaler1.fit_transform(X_train)
 	y_train_norm = scaler2.fit_transform(y_train)
+	# saving the two scalers into pkl file
+	pickle.dump(scaler1, open(os.path.join('data', "scaler1.pkl"), "wb" ) )
+	pickle.dump(scaler2, open(os.path.join('data', "scaler2.pkl"), "wb" ) )
 	# transforming validation data
 	X_val_norm = scaler1.transform(X_val)
 	y_val_norm = scaler2.transform(y_val)
@@ -120,6 +126,19 @@ def main():
 	y_val_pred = scaler2.inverse_transform(y_val_pred)
 	print('RMSE loss on training data: {}'.format(rmse(y_train, y_train_pred)))
 	print('RMSE loss on validation data: {}'.format(rmse(y_val, y_val_pred)))
+
+	'''plot for training loop'''
+	# plots for accuracy and loss for training
+	fig, ax = plt.subplots(1,1, figsize=(7,4))
+	# summarize history for loss
+	plt.plot(tf.math.log(history.history['loss']))
+	plt.plot(tf.math.log(history.history['val_loss']))
+	plt.title('Log loss vs epoch with normalised data')
+	plt.ylabel('log loss')
+	plt.xlabel('epoch')
+	plt.legend(['train', 'val'], loc='upper right')
+	fig.set_facecolor('white')
+	plt.show()
 
 	'''save your model'''
 	model.save(os.path.join('models','20848879_RNN_model'))
