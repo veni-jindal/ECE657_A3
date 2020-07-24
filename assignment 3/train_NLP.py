@@ -184,7 +184,7 @@ def main():
 	# summary of the model
 	model.summary()
 	# fitting the model and storing hstory
-	history = model.fit(X_train, y_train, epochs=50, batch_size= 128, validation_data= (X_val, y_val), verbose=2)
+	history = model.fit(X_train, y_train, epochs=25, batch_size= 128, validation_data= (X_val, y_val), verbose=2)
 	
 	# 3. Save your model
 	model.save(os.path.join('models','20848879_NLP_model'))
